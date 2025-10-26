@@ -12,7 +12,7 @@ class RAGEngine:
         self.uploaded_files = []
 
         # Put your real Gemini API key here
-        api_key = "AIzaSyC4-idS_JcR4OZScXFzoZpSAK758Z_Edv8"  # <--- Replace with your actual Gemini API key
+        api_key = ""  # <--- Replace with your actual Gemini API key
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('models/gemini-2.5-pro')
 
@@ -65,3 +65,4 @@ Answer:"""
             return response.text
         except Exception as e:
             return f"Error: {str(e)}"
+
