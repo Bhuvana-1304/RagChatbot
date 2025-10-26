@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RAG PDF Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px #6654aa44;
+            max-width: 650px;
+            width: 100%;
+            padding: 40px 28px 32px;
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 14px;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.04em;
+        }
+        .file-input-wrapper {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            background: #f8faff;
+            padding: 15px;
+            margin-bottom: 16px;
+        }
+        .file-input-wrapper label {
+            font-weight: bold;
+            color: #667eea;
+            cursor: pointer;
+        }
+        #pdfFile {
+            margin-top: 7px;
+        }
+        button {
+            background: #667eea;
+            color: #fff;
+            font-weight: bold;
+            padding: 13px 0;
+            width: 100%;
+            border: none;
+            border-radius: 7px;
+            font-size: 1.12em;
+            margin-bottom: 12px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5c51bd;
+        }
+        .file-count {
+            color: #666;
+            font-size: 0.98em;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .query-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 17px;
+        }
+        input[type="text"] {
+            flex: 1;
+            border: 2px solid #d2d7e6;
+            border-radius: 8px;
+            padding: 11px 13px;
+            font-size: 1em;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input[type="text"]:focus {
+            border: 2.5px solid #667eea;
+        }
+        .answer-box {
+            background: #f8f9fa;
+            padding: 19px;
+            border-radius: 12px;
+            min-height: 80px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 5px;
+        }
+        .loading {
+            color: #667eea;
+            font-style: italic;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📚 RAG PDF Chatbot</h1>
+    <div class="subtitle">Upload multiple PDFs and ask questions about their content using Gemini AI</div>
+    <div class="file-input-wrapper">
+        <label for="pdfFile">📁 Select PDF Files (you can choose multiple)</label>
+        <input id="pdfFile" type="file" accept=".pdf" multiple>
+        <div class="file-count" id="fileCount">No files chosen</div>
+        <button onclick="uploadPDFs()">Upload PDFs</button>
+    </div>
+    <div class="query-box">
+        <input type="text" id="question" placeholder="Ask a question about your PDFs...">
+        <button onclick="askQuestion()">Ask</button>
+    </div>
+    <div class="answer-box" id="answer">Your answer will appear here...</div>
+  </div>
+  <script>
+    const fileInput = document.getElementById("pdfFile");
+    fileInput.addEventListener('change', function() {
+        let count = fileInput.files.length;
+        document.getElementById("fileCount").textContent = 
+          count > 0 ? `${count} PDF file(s) selected` : "No files chosen";
+    });
+
+    async function uploadPDFs() {
+        let files = document.getElementById("pdfFile").files;
+        if (!files.length) {
+            alert("Please select at least one PDF to upload!");
+            return;
+        }
+        document.getElementById("answer").textContent = "📤 Uploading PDFs...";
+        let success = 0, errors = [];
+        for (let i = 0; i < files.length; ++i) {
+            let formData = new FormData();
+            formData.append("file", files[i]);
+            try {
+                let response = await fetch("/upload", { method: "POST", body: formData });
+                let res = await response.json();
+                if (response.ok) {
+                    success++;
+                } else {
+                    errors.push(`${files[i].name}: ${res.error}`);
+                }
+            } catch (err) {
+                errors.push(`${files[i].name}: ${err.message}`);
+            }
+        }
+        let msg = `Uploaded ${success}/${files.length} PDFs.`;
+        if (errors.length > 0) {
+            msg += "\nErrors:\n" + errors.join("\n");
+        }
+        document.getElementById("answer").textContent = msg;
+        alert(msg);
+    }
+
+    async function askQuestion() {
+        let question = document.getElementById("question").value.trim();
+        if (!question) {
+            alert("Please enter a question!");
+            return;
+        }
+        document.getElementById("answer").textContent = "🤔 Thinking...";
+        let formData = new FormData();
+        formData.append("question", question);
+        try {
+            let response = await fetch("/query", {
+                method: "POST",
+                body: formData
+            });
+            let data = await response.json();
+            document.getElementById("answer").textContent = data.answer || data.error;
+        } catch (err) {
+            document.getElementById("answer").textContent = "Error: " + err.message;
+        }
+    }
+
+    document.getElementById('question').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') askQuestion();
+    });
+  </script>
+</body>
+</html>
